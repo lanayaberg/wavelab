@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaveLab — Mathematical Wave Synthesizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #05060e;
+      --surface: #0b0c16;
+      --surface2: #10121f;
+      --border: rgba(255,255,255,0.06);
+      --text: #dde2f0;
+      --muted: rgba(221,226,240,0.38);
+      --color: #00f5d4;
+      --glow: rgba(0,245,212,0.22);
+      --r: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* Star field */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        radial-gradient(1px 1px at 8%  18%, rgba(255,255,255,.14) 0%, transparent 100%),
+        radial-gradient(1px 1px at 27% 63%, rgba(255,255,255,.09) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 51% 11%, rgba(255,255,255,.11) 0%, transparent 100%),
+        radial-gradient(1px 1px at 74% 82%, rgba(255,255,255,.07) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 44%, rgba(255,255,255,.10) 0%, transparent 100%),
+        radial-gradient(1px 1px at 17% 91%, rgba(255,255,255,.06) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 83% 9%,  rgba(255,255,255,.09) 0%, transparent 100%),
+        radial-gradient(1px 1px at 44% 54%, rgba(255,255,255,.05) 0%, transparent 100%),
+        radial-gradient(1px 1px at 62% 31%, rgba(255,255,255,.08) 0%, transparent 100%),
+        radial-gradient(1px 1px at 36% 77%, rgba(255,255,255,.06) 0%, transparent 100%),
+        radial-gradient(1px 1px at 4%  50%, rgba(255,255,255,.09) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 95% 23%, rgba(255,255,255,.11) 0%, transparent 100%);
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 1.5rem 3rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.75rem 0 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: #fff;
+    }
+
+    .wdot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 0 10px var(--glow);
+      transition: background .3s, box-shadow .3s;
+      animation: breathe 3s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.55; transform:scale(.75); }
+    }
+
+    .hbadges { display:flex; gap:.5rem; }
+
+    .badge {
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      letter-spacing: .5px;
+    }
+
+    /* ── Wave type selector ── */
+    .type-row {
+      display: flex;
+      gap: .5rem;
+      margin: 1.5rem 0 1rem;
+    }
+
+    .wbtn {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .6rem .4rem .5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background .15s, border-color .2s;
+      outline: none;
+    }
+
+    .wbtn:hover { background: var(--surface2); }
+
+    .wbtn-svg { display:block; width:100%; height:22px; margin-bottom:5px; }
+
+    .wbtn-label {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      letter-spacing: .3px;
+      transition: color .15s;
+    }
+
+    .wbtn.on .wbtn-label { color: #fff; }
+
+    /* ── Main grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 236px;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+
+    /* ── Canvas cards ── */
+    .ccard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* CRT scanlines overlay */
+    .ccard::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .clabel {
+      position: absolute;
+      top: 10px; left: 13px;
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      z-index: 3;
+    }
+
+    canvas { display: block; }
+    #osc   { width:100%; height:220px; }
+    #lis   { width:100%; height:164px; }
+
+    .side { display:flex; flex-direction:column; gap:.75rem; }
+
+    /* ── Spectrum card ── */
+    .scard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: .9rem;
+      flex: 1;
+    }
+
+    .card-label {
+      display: block;
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: .65rem;
+    }
+
+    .bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 54px;
+    }
+
+    .bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      background: var(--color);
+      min-height: 2px;
+      transition: height .25s ease, background .3s;
+    }
+
+    /* ── Controls ── */
+    .ctrls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+
+    .ctrl {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .75rem .9rem;
+    }
+
+    .ctrl-n {
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: .2rem;
+    }
+
+    .ctrl-v {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: .45rem;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      font-feature-settings: 'tnum';
+    }
+
+    input[type=range] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,.1);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 0 7px var(--glow);
+      cursor: pointer;
+      transition: background .3s, box-shadow .3s;
+    }
+
+    input[type=range]::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--color);
+      border: none;
+      cursor: pointer;
+    }
+
+    /* ── Info pills ── */
+    .pills {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: .75rem;
+    }
+
+    .pill {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 10px;
+      border-radius: 50px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* ── Bottom bar ── */
+    .bottom {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .formula {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .65rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #fval { color: #fff; }
+
+    .pbtn {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: .85rem;
+      font-weight: 500;
+      padding: .6rem 1.2rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, border-color .2s, color .2s;
+    }
+
+    .pbtn:hover { background: rgba(255,255,255,.09); }
+
+    .pbtn.on { border-color: var(--color); color: var(--color); }
+
+    .pdot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .pbtn.on .pdot { animation: blink 1s infinite; }
+
+    @keyframes blink {
+      0%,100%{ opacity:1; } 50%{ opacity:.3; }
+    }
+
+    /* ── Footer ── */
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 0 0;
+      border-top: 1px solid var(--border);
+      margin-top: 1.25rem;
+    }
+
+    .ft { font-size: 11px; color: rgba(255,255,255,.13); font-family:'JetBrains Mono',monospace; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .grid    { grid-template-columns: 1fr; }
+      .ctrls   { grid-template-columns: 1fr 1fr; }
+      .type-row{ gap: 4px; }
+      .wbtn-label{ font-size:8px; }
+      .hbadges { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="wordmark">
+      <span class="wdot" id="wdot"></span>
+      WaveLab
+    </div>
+    <div class="hbadges">
+      <span class="badge">Web Audio API</span>
+      <span class="badge">Canvas 2D</span>
+      <span class="badge">Mathematics</span>
+    </div>
+  </header>
+
+  <!-- Wave type selector -->
+  <div class="type-row" role="group" aria-label="Wave type">
+
+    <button class="wbtn on" data-type="sine">
+      <svg class="wbtn-svg" viewBox="0 0 80 22" fill="none">
+        <path d="M0 11 C10 1,20 1,30 11 C40 21,50 21,60 11 C70 1,75 1,80 11"
+              stroke="#00f5d4" stroke-width="2" fill="none"/>
+      </svg>
+      <span class="wbtn-label">Sine</span>
+    </button>
+
+    <button class="wbtn" data-type="square">
+      <svg class="wbtn-svg" viewBox="0 0 80 22" fill="none">
+        <path d="M0 17 L0 5 L20 5 L20 17 L40 17 L40 5 L60 5 L60 17 L80 17"
+              stroke="#f72585" stroke-width="2" fill="none"/>
+      </svg>
+      <span class="wbtn-label">Square</span>
+    </button>
+
+    <button class="wbtn" data-type="sawtooth">
+      <svg class="wbtn-svg" viewBox="0 0 80 22" fill="none">
+        <path d="M0 17 L20 5 L20 17 L40 5 L40 17 L60 5 L60 17 L80 5"
+              stroke="#ff9f1c" stroke-width="2" fill="none"/>
+      </svg>
+      <span class="wbtn-label">Sawtooth</span>
+    </button>
+
+    <button class="wbtn" data-type="triangle">
+      <svg class="wbtn-svg" viewBox="0 0 80 22" fill="none">
+        <path d="M0 17 L15 5 L30 17 L45 5 L60 17 L75 5 L80 7"
+              stroke="#b14aed" stroke-width="2" fill="none"/>
+      </svg>
+      <span class="wbtn-label">Triangle</span>
+    </button>
+
+    <button class="wbtn" data-type="fourier">
+      <svg class="wbtn-svg" viewBox="0 0 80 22" fill="none">
+        <path d="M0 11 C6 1,14 1,20 11 C26 21,34 21,40 11 C44 4,47 1,52 6 C57 11,59 15,64 11 C69 7,72 5,80 11"
+              stroke="#4cc9f0" stroke-width="2" fill="none"/>
+      </svg>
+      <span class="wbtn-label">Fourier</span>
+    </button>
+
+  </div>
+
+  <!-- Oscilloscope + side panels -->
+  <div class="grid">
+
+    <div class="ccard">
+      <span class="clabel">Oscilloscope</span>
+      <canvas id="osc"></canvas>
+    </div>
+
+    <div class="side">
+      <div class="ccard">
+        <span class="clabel">Lissajous</span>
+        <canvas id="lis"></canvas>
+      </div>
+      <div class="scard">
+        <span class="card-label">Harmonic spectrum</span>
+        <div class="bars" id="spec"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sliders -->
+  <div class="ctrls">
+    <div class="ctrl">
+      <div class="ctrl-n">Frequency</div>
+      <div class="ctrl-v" id="v-freq">220 Hz</div>
+      <input type="range" id="s-freq" min="60" max="880" step="1" value="220">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-n">Amplitude</div>
+      <div class="ctrl-v" id="v-amp">0.70</div>
+      <input type="range" id="s-amp" min="0.05" max="1" step="0.01" value="0.70">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-n">Phase (rad)</div>
+      <div class="ctrl-v" id="v-phase">0.00</div>
+      <input type="range" id="s-phase" min="0" max="6.28" step="0.01" value="0">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-n">Harmonics</div>
+      <div class="ctrl-v" id="v-harm">3</div>
+      <input type="range" id="s-harm" min="1" max="16" step="1" value="3">
+    </div>
+  </div>
+
+  <!-- Info pills -->
+  <div class="pills">
+    <span class="pill" id="p-period">Period: 4.55ms</span>
+    <span class="pill" id="p-lambda">λ = 1.56m</span>
+    <span class="pill" id="p-omega">ω = 1382 rad/s</span>
+    <span class="pill" id="p-note">Note: A3</span>
+  </div>
+
+  <!-- Formula + play -->
+  <div class="bottom">
+    <div class="formula">
+      <span style="font-size:9px;color:rgba(255,255,255,.22);letter-spacing:1px;text-transform:uppercase;margin-right:.75rem">Formula</span>
+      <span id="fval">y(t) = 0.70 · sin(2π · 220 · t + 0.00)</span>
+    </div>
+    <button class="pbtn" id="pbtn">
+      <span class="pdot"></span>
+      Play sound
+    </button>
+  </div>
+
+  <footer>
+    <span class="ft">WaveLab — Mathematical Wave Synthesizer</span>
+    <span class="ft">Web Audio API · Canvas 2D · Vanilla JS</span>
+  </footer>
+
+</div><!-- /wrap -->
+
+<script>
+'use strict';
+
+/* ── Constants ─────────────────────────────────── */
+const COLORS = {
+  sine:     { col:'#00f5d4', glow:'rgba(0,245,212,.22)'   },
+  square:   { col:'#f72585', glow:'rgba(247,37,133,.22)'  },
+  sawtooth: { col:'#ff9f1c', glow:'rgba(255,159,28,.22)'  },
+  triangle: { col:'#b14aed', glow:'rgba(177,74,237,.22)'  },
+  fourier:  { col:'#4cc9f0', glow:'rgba(76,201,240,.22)'  },
+};
+
+const LIS_RATIO = { sine:1, square:2, sawtooth:3, triangle:1.5, fourier:2 };
+
+const TAU = Math.PI * 2;
+
+/* ── State ─────────────────────────────────────── */
+const S = {
+  type: 'sine',
+  freq: 220,
+  amp: 0.7,
+  phase: 0,
+  harmonics: 3,
+  tick: 0,
+  lisTick: 0,
+  lisTrail: [],
+  playing: false,
+  audioCtx: null,
+  oscNode: null,
+  gainNode: null,
+};
+
+/* ── Canvas setup ──────────────────────────────── */
+const oscEl = document.getElementById('osc');
+const lisEl = document.getElementById('lis');
+const oc = oscEl.getContext('2d');
+const lc = lisEl.getContext('2d');
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  for (const [el, ctx] of [[oscEl,oc],[lisEl,lc]]) {
+    const r = el.getBoundingClientRect();
+    el.width  = r.width  * dpr;
+    el.height = r.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  // Clear Lissajous background
+  const W = lisEl.clientWidth, H = lisEl.clientHeight;
+  lc.fillStyle = '#0b0c16';
+  lc.fillRect(0, 0, W, H);
+  S.lisTrail = [];
+}
+
+/* ── Wave math ─────────────────────────────────── */
+function wave(x, type, harm) {
+  switch (type) {
+    case 'sine':     return Math.sin(x);
+    case 'square':   return Math.sign(Math.sin(x)) || 1;
+    case 'sawtooth': {
+      const p = ((x % TAU) + TAU) % TAU;
+      return 2 * (p / TAU) - 1;
+    }
+    case 'triangle': {
+      const p = ((x % TAU) + TAU) % TAU / TAU;
+      return 1 - 4 * Math.abs(p - 0.5);
+    }
+    case 'fourier': {
+      let v = 0;
+      for (let k = 1; k <= harm; k += 2) v += Math.sin(k * x) / k;
+      return v * (4 / Math.PI) * 0.76;
+    }
+  }
+  return 0;
+}
+
+/* ── Draw oscilloscope ─────────────────────────── */
+function drawOsc() {
+  const W = oscEl.clientWidth, H = oscEl.clientHeight;
+  oc.clearRect(0, 0, W, H);
+
+  // Background
+  oc.fillStyle = '#0b0c16';
+  oc.fillRect(0, 0, W, H);
+
+  // Grid lines
+  oc.strokeStyle = 'rgba(255,255,255,.032)';
+  oc.lineWidth = 1;
+  for (let i = 1; i < 8; i++) {
+    oc.beginPath(); oc.moveTo(W*i/8, 0); oc.lineTo(W*i/8, H); oc.stroke();
+  }
+  for (let i = 1; i < 4; i++) {
+    oc.beginPath(); oc.moveTo(0, H*i/4); oc.lineTo(W, H*i/4); oc.stroke();
+  }
+
+  // Center line
+  oc.strokeStyle = 'rgba(255,255,255,.09)';
+  oc.lineWidth = 1;
+  oc.beginPath(); oc.moveTo(0, H/2); oc.lineTo(W, H/2); oc.stroke();
+
+  const col   = COLORS[S.type].col;
+  const speed = (S.freq / 220) * 0.032;
+  const CYCLES = 2.6;
+
+  // Ghost wave (phosphor afterglow)
+  oc.strokeStyle = col + '22';
+  oc.lineWidth = 1.5;
+  oc.beginPath();
+  for (let px = 0; px <= W; px++) {
+    const x  = (px / W) * CYCLES * TAU + S.tick * speed * 0.45 + S.phase;
+    const y  = wave(x, S.type, S.harmonics);
+    const py = H/2 - y * S.amp * (H/2 - 18);
+    px === 0 ? oc.moveTo(px, py) : oc.lineTo(px, py);
+  }
+  oc.stroke();
+
+  // Main wave with glow
+  oc.shadowColor = col;
+  oc.shadowBlur  = 16;
+  oc.strokeStyle = col;
+  oc.lineWidth   = 2.5;
+  oc.beginPath();
+  for (let px = 0; px <= W; px++) {
+    const x  = (px / W) * CYCLES * TAU + S.tick * speed + S.phase;
+    const y  = wave(x, S.type, S.harmonics);
+    const py = H/2 - y * S.amp * (H/2 - 18);
+    px === 0 ? oc.moveTo(px, py) : oc.lineTo(px, py);
+  }
+  oc.stroke();
+  oc.shadowBlur = 0;
+}
+
+/* ── Draw Lissajous ────────────────────────────── */
+function drawLis() {
+  const W = lisEl.clientWidth, H = lisEl.clientHeight;
+
+  // Phosphor fade
+  lc.fillStyle = 'rgba(11,12,22,.1)';
+  lc.fillRect(0, 0, W, H);
+
+  const col   = COLORS[S.type].col;
+  const ratio = LIS_RATIO[S.type];
+  const cx    = W / 2, cy = H / 2;
+  const R     = Math.min(W, H) * 0.41;
+  const step  = 0.04 * (S.freq / 220) * 0.28;
+
+  S.lisTick += step;
+
+  const px = cx + R * Math.sin(S.lisTick);
+  const py = cy + R * Math.sin(S.lisTick * ratio + S.phase);
+  S.lisTrail.push({ x: px, y: py });
+
+  const maxLen = Math.max(120, Math.floor(380 / (S.freq / 220)));
+  if (S.lisTrail.length > maxLen) S.lisTrail.shift();
+
+  // Draw trail
+  for (let i = 1; i < S.lisTrail.length; i++) {
+    const alpha = i / S.lisTrail.length;
+    const hex   = Math.floor(alpha * 210).toString(16).padStart(2, '0');
+    lc.strokeStyle = col + hex;
+    lc.lineWidth   = alpha > 0.85 ? 2 : 1.2;
+    lc.shadowBlur  = alpha > 0.9 ? 8 : 0;
+    lc.shadowColor = col;
+    lc.beginPath();
+    lc.moveTo(S.lisTrail[i-1].x, S.lisTrail[i-1].y);
+    lc.lineTo(S.lisTrail[i].x,   S.lisTrail[i].y);
+    lc.stroke();
+  }
+  lc.shadowBlur = 0;
+}
+
+/* ── Spectrum bars ─────────────────────────────── */
+function buildBars() {
+  const el  = document.getElementById('spec');
+  const col = COLORS[S.type].col;
+  const N   = 8;
+
+  // Amplitude per harmonic
+  const amps = Array.from({ length: N }, (_, i) => {
+    const k = i + 1;
+    if (S.type === 'sine')     return k === 1 ? 1 : 0;
+    if (S.type === 'square')   return k % 2 === 1 ? 1/k : 0;
+    if (S.type === 'sawtooth') return 1/k;
+    if (S.type === 'triangle') return k % 2 === 1 ? 1/(k*k) : 0;
+    if (S.type === 'fourier')  { const h = 2*k-1; return h <= S.harmonics ? 1/h : 0; }
+    return 0;
+  });
+
+  const mx = Math.max(...amps, 0.001);
+
+  // Build/update DOM bars
+  if (el.children.length !== N) {
+    el.innerHTML = '';
+    for (let i = 0; i < N; i++) {
+      const b = document.createElement('div');
+      b.className = 'bar';
+      el.appendChild(b);
+    }
+  }
+
+  [...el.children].forEach((b, i) => {
+    b.style.height     = Math.round(amps[i]/mx * 52) + 'px';
+    b.style.background = col;
+    b.style.opacity    = amps[i] > 0 ? (.45 + amps[i]/mx*.55).toFixed(2) : '.07';
+  });
+}
+
+/* ── Formula text ──────────────────────────────── */
+function updateFormula() {
+  const a  = S.amp.toFixed(2);
+  const ph = S.phase.toFixed(2);
+  const f  = S.freq;
+  let txt  = '';
+  switch (S.type) {
+    case 'sine':
+      txt = `y(t) = ${a} · sin(2π · ${f} · t + ${ph})`; break;
+    case 'square':
+      txt = `y(t) = ${a} · sgn(sin(2π · ${f} · t + ${ph}))`; break;
+    case 'sawtooth':
+      txt = `y(t) = ${a} · 2(${f}t − ⌊${f}t + 0.5⌋)`; break;
+    case 'triangle':
+      txt = `y(t) = ${a} · (2/π) · arcsin(sin(2π · ${f} · t))`; break;
+    case 'fourier': {
+      const terms = [];
+      for (let k = 1; k <= Math.min(S.harmonics, 3); k += 2)
+        terms.push(`(1/${k})·sin(${k}·2π·${f}·t)`);
+      if (S.harmonics > 3) terms.push('…');
+      txt = `y(t) = (4/π)[${terms.join(' + ')}]`;
+      break;
+    }
+  }
+  document.getElementById('fval').textContent = txt;
+}
+
+/* ── Info pills ────────────────────────────────── */
+function updatePills() {
+  const f = S.freq;
+  document.getElementById('p-period').textContent = `Period: ${(1000/f).toFixed(2)}ms`;
+  document.getElementById('p-lambda').textContent = `λ = ${(343/f).toFixed(2)}m`;
+  document.getElementById('p-omega').textContent  = `ω = ${Math.round(TAU*f)} rad/s`;
+  const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const midi  = Math.round(12 * Math.log2(f/440) + 69);
+  document.getElementById('p-note').textContent =
+    `Note: ${NOTES[((midi%12)+12)%12]}${Math.floor(midi/12)-1}`;
+}
+
+/* ── Apply colour theme ────────────────────────── */
+function applyColor(type) {
+  const { col, glow } = COLORS[type];
+  const r = document.documentElement.style;
+  r.setProperty('--color', col);
+  r.setProperty('--glow',  glow);
+}
+
+/* ── Audio ─────────────────────────────────────── */
+function initAudio() {
+  if (!S.audioCtx) {
+    S.audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    S.gainNode  = S.audioCtx.createGain();
+    S.gainNode.connect(S.audioCtx.destination);
+  }
+}
+
+function startSound() {
+  initAudio();
+  if (S.oscNode) { S.oscNode.stop(); S.oscNode = null; }
+  S.oscNode = S.audioCtx.createOscillator();
+  const MAP = { sine:'sine', square:'square', sawtooth:'sawtooth', triangle:'triangle', fourier:'sawtooth' };
+  S.oscNode.type = MAP[S.type];
+  S.oscNode.frequency.value = S.freq;
+  S.gainNode.gain.setValueAtTime(0, S.audioCtx.currentTime);
+  S.gainNode.gain.linearRampToValueAtTime(S.amp * 0.33, S.audioCtx.currentTime + 0.06);
+  S.oscNode.connect(S.gainNode);
+  S.oscNode.start();
+  S.playing = true;
+  const btn = document.getElementById('pbtn');
+  btn.classList.add('on');
+  btn.innerHTML = '<span class="pdot"></span> Stop';
+}
+
+function stopSound() {
+  if (S.oscNode) {
+    S.gainNode.gain.linearRampToValueAtTime(0, S.audioCtx.currentTime + 0.08);
+    setTimeout(() => { if (S.oscNode) { S.oscNode.stop(); S.oscNode = null; } }, 120);
+  }
+  S.playing = false;
+  const btn = document.getElementById('pbtn');
+  btn.classList.remove('on');
+  btn.innerHTML = '<span class="pdot"></span> Play sound';
+}
+
+/* ── Main loop ─────────────────────────────────── */
+function loop() {
+  drawOsc();
+  drawLis();
+  S.tick++;
+  requestAnimationFrame(loop);
+}
+
+/* ── Events ────────────────────────────────────── */
+document.querySelectorAll('.wbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.wbtn').forEach(b => {
+      b.classList.remove('on');
+      b.style.borderColor = '';
+    });
+    btn.classList.add('on');
+    btn.style.borderColor = COLORS[btn.dataset.type].col;
+    S.type = btn.dataset.type;
+    S.lisTrail = [];
+    applyColor(S.type);
+    if (S.oscNode) {
+      const MAP = { sine:'sine', square:'square', sawtooth:'sawtooth', triangle:'triangle', fourier:'sawtooth' };
+      S.oscNode.type = MAP[S.type];
+    }
+    updateFormula(); buildBars();
+  });
+});
+
+document.getElementById('s-freq').addEventListener('input', e => {
+  S.freq = parseInt(e.target.value);
+  document.getElementById('v-freq').textContent = S.freq + ' Hz';
+  if (S.oscNode) S.oscNode.frequency.value = S.freq;
+  S.lisTrail = [];
+  updateFormula(); updatePills();
+});
+
+document.getElementById('s-amp').addEventListener('input', e => {
+  S.amp = parseFloat(e.target.value);
+  document.getElementById('v-amp').textContent = S.amp.toFixed(2);
+  if (S.gainNode && S.playing) S.gainNode.gain.value = S.amp * 0.33;
+  updateFormula();
+});
+
+document.getElementById('s-phase').addEventListener('input', e => {
+  S.phase = parseFloat(e.target.value);
+  document.getElementById('v-phase').textContent = S.phase.toFixed(2);
+  S.lisTrail = [];
+  updateFormula();
+});
+
+document.getElementById('s-harm').addEventListener('input', e => {
+  S.harmonics = parseInt(e.target.value);
+  document.getElementById('v-harm').textContent = S.harmonics;
+  updateFormula(); buildBars();
+});
+
+document.getElementById('pbtn').addEventListener('click', () => {
+  S.playing ? stopSound() : startSound();
+});
+
+window.addEventListener('resize', resize);
+
+/* ── Init ──────────────────────────────────────── */
+applyColor('sine');
+document.querySelector('.wbtn.on').style.borderColor = COLORS.sine.col;
+updateFormula();
+updatePills();
+
+setTimeout(() => {
+  resize();
+  buildBars();
+  loop();
+}, 80);
+</script>
+</body>
+</html>
