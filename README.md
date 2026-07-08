@@ -1,6 +1,6 @@
-# 〰️ WaveLab — Mathematical Wave Synthesizer
+# 〰️ WaveLab — Interactive Mathematics of Sound
 
-> An interactive mathematical wave synthesizer that lets you **see** and **hear** the physics of sound — built with pure HTML, CSS, and JavaScript.
+> Five interactive modules that let you **see** and **hear** the mathematics behind sound, waves, and motion — built entirely with HTML, CSS, and JavaScript. No frameworks, no build step, no dependencies.
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
@@ -15,98 +15,72 @@
 
 ## ✨ What is this?
 
-WaveLab is an interactive tool that visualizes **mathematical wave functions** in real time — complete with sound synthesis. Adjust frequency, amplitude, phase, and harmonics while watching the math unfold on screen and hearing it through your speakers.
+WaveLab is a single-page interactive tool with **five modules**, each exploring a different piece of the mathematics that makes sound and periodic motion work — from basic waveforms to 3D parametric curves. Every module is fully interactive and most of them produce real audio through the Web Audio API.
 
-It's both a **creative toy** and a **learning tool** for understanding the physics and mathematics behind sound.
-
----
-
-## 🎛️ Features
-
-| Feature | Description |
-|---|---|
-| **Oscilloscope** | Real-time animated wave with CRT phosphor glow effect |
-| **Lissajous Figure** | XY plot showing two frequencies combined — reveals hidden geometric patterns |
-| **Harmonic Spectrum** | Visual spectrum analyzer showing the amplitude of each harmonic |
-| **Sound Synthesis** | Real audio output via Web Audio API — hear what you see |
-| **5 Wave Types** | Sine, Square, Sawtooth, Triangle, Fourier series |
-| **4 Live Controls** | Frequency (60–880 Hz), Amplitude, Phase shift, Harmonics |
-| **Live Formula** | Mathematical formula updates in real time as you adjust parameters |
-| **Music Theory** | Shows the musical note, period, wavelength, and angular frequency |
-| **Zero Dependencies** | Pure HTML/CSS/JS — no frameworks, no libraries, no build step |
+It's both a **creative toy** and a **learning tool** — the kind of thing that makes an abstract formula in a textbook suddenly click.
 
 ---
 
-## 🌊 The Wave Types
+## 🎛️ The Five Modules
 
-### Sine Wave
-The fundamental building block of all sound. Pure, smooth, mathematically perfect.
+### 〜 Waveform Lab
+The foundation. Five wave types — Sine, Square, Sawtooth, Triangle, and a live Fourier approximation — rendered on an animated oscilloscope with CRT phosphor glow, alongside a Lissajous figure and a harmonic spectrum analyzer. Adjust frequency, amplitude, phase, and harmonic count; hear the result instantly.
 
-```
-y(t) = A · sin(2π · f · t + φ)
-```
+### ◎ Fourier Epicycles
+Joseph Fourier proved in 1822 that *any* periodic wave can be built from a sum of rotating circles. This module animates that proof directly: watch a chain of circles — each one a single sine term — rotate and combine to trace out a square, sawtooth, or triangle wave in real time. Add more harmonics and watch the approximation sharpen.
 
-### Square Wave
-Jumps instantly between +1 and −1. Rich in odd harmonics — sounds like a retro video game.
+### ∿+∿ Wave Mixer
+Two fully independent oscillators (type, frequency, amplitude) are summed point-by-point into a third wave. Set their frequencies close together and you'll hear **beating** — the audible pulsing that happens when two nearby frequencies interfere constructively and destructively over time.
 
-```
-y(t) = A · sgn(sin(2π · f · t + φ))
-```
+### ♪ Piano
+A two-octave virtual keyboard (C4–C6) playable by mouse, touch, or computer keyboard (A S D F G H J K L for white keys, W E T Y U O for black keys). Choose any of the four waveforms as the instrument's timbre and watch a live oscilloscope trace whatever note is currently playing.
 
-Fourier decomposition: `y = (4/π)[sin(x) + sin(3x)/3 + sin(5x)/5 + ...]`
-
-### Sawtooth Wave
-Rises linearly then drops sharply. Contains **all** harmonics — the brightest, most aggressive tone.
-
-```
-y(t) = A · 2(f·t − ⌊f·t + 0.5⌋)
-```
-
-### Triangle Wave
-Rises and falls linearly. Only odd harmonics like square, but they fall off much faster — a softer sound.
-
-```
-y(t) = A · (2/π) · arcsin(sin(2π · f · t))
-```
-
-### Fourier Series
-The key insight of mathematics: **any** periodic wave can be built from sine waves. Watch as adding more harmonics progressively approximates a square wave.
-
-```
-y(t) = (4/π) · Σ sin((2k−1)·2π·f·t) / (2k−1),  k = 1, 2, 3, ...
-```
+### ◆ 3D Lissajous
+Three independent sine oscillators drive a point through 3D space; a rotation matrix projects it onto the 2D canvas with a phosphor-trail effect. Drag to rotate the figure manually, tune the frequency ratios, and press play to hear the three oscillators as a chord.
 
 ---
 
 ## 📐 The Math Behind It
 
+### Fourier Series
+The core insight powering both the Waveform Lab and the Epicycles module: any periodic function can be expressed as an infinite sum of sines.
+
+```
+Square:    y = (4/π) Σ sin((2k−1)t)/(2k−1),      k = 1, 2, 3, ...
+Sawtooth:  y = (2/π) Σ (−1)ⁿ⁺¹ sin(nt)/n,         n = 1, 2, 3, ...
+Triangle:  y = (8/π²) Σ (−1)ᵏ sin((2k+1)t)/(2k+1)², k = 0, 1, 2, ...
+```
+
+This theorem underpins digital audio compression (MP3), image compression (JPEG), and signal processing generally.
+
+### Wave Interference & Beating
+When two waves of similar frequency are added, the result is a wave whose amplitude rises and falls at the *difference* between the two frequencies:
+
+```
+beat frequency = |f₁ − f₂|
+```
+
+This is why two out-of-tune guitar strings produce an audible "wah-wah" — and why piano tuners use it to tune by ear.
+
+### Rotation Matrices (3D Lissajous)
+The 3D module rotates each point around the Y-axis every frame using the standard 2D rotation matrix applied to the x/z plane:
+
+```
+x' = x·cos(θ) + z·sin(θ)
+z' = −x·sin(θ) + z·cos(θ)
+y' = y
+```
+followed by a simple perspective-divide projection to place it on a 2D canvas. This is the same core operation (matrix transformation of a coordinate vector) used throughout computer graphics and — not coincidentally — throughout machine learning.
+
 ### Lissajous Figures
-The Lissajous canvas plots two oscillators against each other on X and Y axes:
+First studied by Jules Antoine Lissajous in 1857, these curves plot two (or three) oscillators against each other:
 
 ```
-x(t) = A · sin(ω₁ · t)
-y(t) = B · sin(ω₂ · t + φ)
+x(t) = sin(a·t)
+y(t) = sin(b·t + δ)
 ```
 
-The ratio ω₁/ω₂ determines the shape:
-- `1:1` → Ellipse or circle (depending on phase)
-- `1:2` → Figure eight
-- `1:3` → Three-looped curve
-- `2:3` → Pretzel shape
-
-These patterns were first studied by **Jules Antoine Lissajous** in 1857 and are still used today to measure frequency ratios on oscilloscopes.
-
-### Why Phase Matters
-The phase shift `φ` slides the wave horizontally without changing its shape or frequency. When two waves are **in phase** (φ=0) they add constructively — when **out of phase** (φ=π) they cancel completely. This is the physics of noise-cancelling headphones.
-
-### Fourier's Big Idea
-Joseph Fourier proved in 1822 that any periodic function — no matter how complex — can be expressed as an infinite sum of sine waves. This theorem is the foundation of:
-- Digital audio (MP3, AAC)
-- Image compression (JPEG)
-- Signal processing
-- Quantum mechanics
-
-You can see it in action: move the **Harmonics** slider while in Fourier mode and watch a perfect square wave gradually emerge from overlapping sines.
+The ratio `a:b` determines the shape — `1:1` gives an ellipse, `1:2` a figure-eight, `3:2:5` (the 3D module's default) a complex non-repeating braid.
 
 ---
 
@@ -115,12 +89,11 @@ You can see it in action: move the **Harmonics** slider while in Fourier mode an
 | Frequency | Musical Note | Context |
 |---|---|---|
 | 60 Hz | B1 | Lowest bass guitar string |
-| 110 Hz | A2 | Standard bass |
 | 220 Hz | A3 | Default — warm midrange |
 | 440 Hz | A4 | Concert pitch (A440) |
 | 880 Hz | A5 | Bright treble |
 
-> The relationship between musical notes follows the formula: **f = 440 × 2^((n−69)/12)** where n is the MIDI note number.
+> f = 440 × 2^((n−69)/12), where n is the MIDI note number — the formula behind every note name shown in the app.
 
 ---
 
@@ -129,12 +102,9 @@ You can see it in action: move the **Harmonics** slider while in Fourier mode an
 No installation. No dependencies. Just open a file.
 
 ```bash
-# Clone the repo
 git clone https://github.com/lanayaberg/wavelab.git
-
-# Open in your browser
+cd wavelab
 open index.html
-# or just double-click the file
 ```
 
 Or visit the **[live demo](https://lanayaberg.github.io/wavelab)** directly.
@@ -143,62 +113,43 @@ Or visit the **[live demo](https://lanayaberg.github.io/wavelab)** directly.
 
 ## 🏗️ How It's Built
 
-Everything lives in a single `index.html` file. No build tools, no npm, no frameworks.
-
 ```
 wavelab/
 └── index.html   # Everything: HTML + CSS + JavaScript
 ```
 
+One file. No build tools, no npm, no bundler.
+
 ### Tech Stack
 
 | Technology | Usage |
 |---|---|
-| **Canvas 2D API** | Oscilloscope and Lissajous rendering at 60fps |
-| **Web Audio API** | Real-time sound synthesis with OscillatorNode |
-| **CSS Custom Properties** | Live color theming — each wave type has its own color palette |
-| **requestAnimationFrame** | Smooth 60fps animation loop |
-| **Google Fonts** | Space Grotesk + JetBrains Mono |
+| **Canvas 2D API** | All rendering — oscilloscopes, Lissajous trails, epicycles, 3D projection — at 60fps |
+| **Web Audio API** | A small polyphonic voice engine (`VoiceEngine`) built on `OscillatorNode` + `GainNode`, supporting simultaneous notes/tones across every module |
+| **CSS Custom Properties** | Live, scoped color theming — each module's accent color updates instantly without touching JS-driven layout |
+| **requestAnimationFrame** | A single master loop dispatches to whichever module is active, keeping idle tabs at zero cost |
+| **Pointer Events** | Unified mouse/touch/pen handling for the piano keys and the 3D drag-to-rotate interaction |
 
 ### Key Implementation Details
 
-**Oscilloscope rendering** — The wave is sampled at every pixel column. A "ghost" copy is drawn at half-speed and lower opacity to create the phosphor afterglow (CRT effect). CSS scanlines add the finishing touch.
+**Polyphonic audio engine** — Rather than one hard-coded oscillator, `VoiceEngine` manages a `Map` of independently addressable voices by ID, so the Piano can hold multiple notes at once, the Mixer can play two custom waveforms simultaneously, and the 3D module can play a three-note chord — all through the same small API (`play`, `update`, `stop`).
 
-**Lissajous trail** — Each frame adds a new point to a trail array. Older points are drawn with lower opacity — the phosphor fade effect. The trail length is inversely proportional to frequency to keep the figure readable at all speeds.
+**Fourier epicycles** — Each harmonic term becomes a rotating vector; the vectors are chained tip-to-tail, and the y-coordinate of the final tip *is* the partial Fourier sum at that instant, drawn live as a scrolling trace alongside the circles that produced it.
 
-**Sound synthesis** — Web Audio API's `OscillatorNode` directly supports all four standard waveforms. For Fourier mode, sawtooth is used as the closest approximation.
+**3D projection without a 3D library** — The Lissajous module hand-rolls a Y-axis rotation matrix and a perspective divide rather than pulling in Three.js, keeping the zero-dependency philosophy intact while still producing a convincing sense of depth (particles shrink and dim as they recede).
 
-**Color theming** — A single CSS custom property `--color` drives the entire visual theme — wave stroke, glow, slider thumb, badge colors, Lissajous trail, and spectrum bars all update instantly when you switch wave types.
-
----
-
-## 📸 Screenshots
-
-| Sine Wave | Fourier Series | Square Wave |
-|---|---|---|
-| Smooth, pure | Built from harmonics | Sharp edges, rich tone |
+**Tab-scoped color theming** — Only the Waveform Lab's own DOM subtree listens to its dynamic `--color` custom property; every other module keeps the app's default teal, so switching wave types in one tab never bleeds into another.
 
 ---
 
 ## 🧠 What I Learned Building This
 
-- **Canvas 2D rendering** — coordinate systems, transforms, shadow/glow effects, frame-by-frame animation
-- **Web Audio API** — `AudioContext`, `OscillatorNode`, `GainNode`, envelope shaping (linear ramp to avoid clicks)
-- **Fourier analysis** — why any wave can be decomposed into sines, and how convergence works visually
-- **Lissajous figures** — parametric equations and the geometric relationship between frequency ratios
-- **CSS custom properties** — using them as a live theming system driven by JavaScript
-- **Performance** — keeping `requestAnimationFrame` loops lean, batching DOM reads, avoiding layout thrash
-
----
-
-## 🔭 Roadmap / Ideas
-
-- [ ] Oscilloscope zoom and pan
-- [ ] Two-wave mixer (add waves together)
-- [ ] Record and export audio (.wav)
-- [ ] Piano keyboard to play notes
-- [ ] 3D Lissajous figure (three oscillators)
-- [ ] Frequency modulation (FM synthesis)
+- **Canvas 2D rendering** — coordinate systems, phosphor-fade trail effects, shadow/glow rendering, and keeping a single `requestAnimationFrame` loop lean across five very different visualizations
+- **Web Audio API** — building a reusable polyphonic voice manager, envelope shaping to avoid clicks/pops, and mixing multiple live oscillators
+- **Fourier analysis** — implementing the actual series (not just describing it) for square, sawtooth, and triangle waves, and watching Gibbs phenomenon appear naturally at low harmonic counts
+- **3D→2D projection** — rotation matrices and perspective-divide, applied by hand
+- **Interaction design** — keyboard shortcuts, pointer-based drag-to-rotate, and touch-friendly piano keys, all sharing one input model
+- **CSS custom properties as a theming system** — scoping dynamic state to a subtree instead of the global root to avoid cross-component leakage
 
 ---
 

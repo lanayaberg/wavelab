@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WaveLab — Interactive Mathematics of Sound</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:#05060e; --surface:#0b0c16; --surface2:#10121f;
+  --border:rgba(255,255,255,.06); --text:#dde2f0; --muted:rgba(221,226,240,.38);
+  --color:#00f5d4; --glow:rgba(0,245,212,.22); --r:12px;
+}
+
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh;line-height:1.5;}
+
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(1px 1px at 8% 18%,rgba(255,255,255,.14) 0%,transparent 100%),
+    radial-gradient(1px 1px at 27% 63%,rgba(255,255,255,.09) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 51% 11%,rgba(255,255,255,.11) 0%,transparent 100%),
+    radial-gradient(1px 1px at 74% 82%,rgba(255,255,255,.07) 0%,transparent 100%),
+    radial-gradient(1px 1px at 90% 44%,rgba(255,255,255,.10) 0%,transparent 100%),
+    radial-gradient(1px 1px at 17% 91%,rgba(255,255,255,.06) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 83% 9%,rgba(255,255,255,.09) 0%,transparent 100%),
+    radial-gradient(1px 1px at 44% 54%,rgba(255,255,255,.05) 0%,transparent 100%),
+    radial-gradient(1px 1px at 62% 31%,rgba(255,255,255,.08) 0%,transparent 100%),
+    radial-gradient(1px 1px at 36% 77%,rgba(255,255,255,.06) 0%,transparent 100%),
+    radial-gradient(1px 1px at 4% 50%,rgba(255,255,255,.09) 0%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 95% 23%,rgba(255,255,255,.11) 0%,transparent 100%);
+}
+
+.wrap{max-width:1080px;margin:0 auto;padding:0 1.5rem 3rem;position:relative;z-index:1;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:1.75rem 0 1.5rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:.75rem;}
+.wordmark{display:flex;align-items:center;gap:.55rem;font-size:1.2rem;font-weight:700;letter-spacing:-.4px;color:#fff;}
+.wdot{width:9px;height:9px;border-radius:50%;background:#00f5d4;box-shadow:0 0 10px rgba(0,245,212,.3);animation:breathe 3s ease-in-out infinite;}
+@keyframes breathe{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(.75);}}
+.hbadges{display:flex;gap:.5rem;}
+.badge{font-size:9px;font-family:'JetBrains Mono',monospace;padding:3px 9px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);letter-spacing:.5px;white-space:nowrap;}
+
+/* Tabs */
+.tabs{display:flex;gap:.5rem;margin:1.5rem 0 .25rem;overflow-x:auto;padding-bottom:2px;}
+.tab{
+  flex:0 0 auto;background:var(--surface);border:1px solid var(--border);border-radius:50px;
+  padding:.55rem 1.1rem;font-family:'Space Grotesk',sans-serif;font-size:.82rem;font-weight:500;
+  color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;
+}
+.tab:hover{background:var(--surface2);color:var(--text);}
+.tab.on{border-color:var(--tabcol,var(--color));color:var(--tabcol,var(--color));background:rgba(255,255,255,.03);}
+
+.panel-intro{color:var(--muted);font-size:.82rem;margin:1rem 0 1rem;line-height:1.55;max-width:660px;}
+
+/* Wave type row (Lab / Epi) */
+.type-row{display:flex;gap:.5rem;margin-bottom:1rem;}
+.wbtn{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.6rem .4rem .5rem;cursor:pointer;text-align:center;transition:background .15s;outline:none;}
+.wbtn:hover{background:var(--surface2);}
+.wbtn-svg{display:block;width:100%;height:22px;margin-bottom:5px;}
+.wbtn-label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:.3px;transition:color .15s;}
+.wbtn.on .wbtn-label{color:#fff;}
+.wbtn.on{border-color:var(--wbtncol,var(--color));}
+
+/* Compact swatches (Mixer / Piano) */
+.wswatches{display:flex;gap:.5rem;margin:.35rem 0 .8rem;}
+.wswatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;opacity:.5;transition:opacity .15s,border-color .15s,transform .15s;}
+.wswatch.on{opacity:1;border-color:#fff;transform:scale(1.14);}
+
+/* Grids & cards */
+.grid{display:grid;grid-template-columns:1fr 236px;gap:.75rem;margin-bottom:.75rem;}
+.grid-even{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;}
+.ccard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:relative;}
+.ccard::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:2;}
+.clabel{position:absolute;top:10px;left:13px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:2px;text-transform:uppercase;z-index:3;}
+canvas{display:block;width:100%;}
+.ch-320{height:320px;} .ch-220{height:220px;} .ch-180{height:180px;}
+.ch-164{height:164px;} .ch-150{height:150px;} .ch-130{height:130px;} .ch-100{height:100px;}
+
+.side{display:flex;flex-direction:column;gap:.75rem;}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.9rem;flex:1;}
+.card-label{display:block;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:.65rem;}
+.bars{display:flex;align-items:flex-end;gap:4px;height:54px;}
+.bar{flex:1;border-radius:3px 3px 0 0;background:var(--color);min-height:2px;transition:height .25s ease,background .3s;}
+
+/* Sliders */
+.ctrls{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:.75rem;}
+.ctrl{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem;}
+.ctrl-n{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.2rem;}
+.ctrl-v{font-size:1.15rem;font-weight:600;color:#fff;margin-bottom:.45rem;font-family:'JetBrains Mono',monospace;line-height:1;font-feature-settings:'tnum';}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.1);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--color);box-shadow:0 0 7px var(--glow);cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--color);border:none;cursor:pointer;}
+
+/* Pills */
+.pills{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem;}
+.pill{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 10px;border-radius:50px;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);}
+
+/* Bottom bar */
+.bottom{display:flex;align-items:center;gap:.75rem;}
+.formula{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.65rem 1rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.formula span.hl{color:#fff;}
+.pbtn{display:flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:.85rem;font-weight:500;padding:.6rem 1.2rem;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.pbtn:hover{background:rgba(255,255,255,.09);}
+.pbtn.on{border-color:var(--color);color:var(--color);}
+.pdot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.pbtn.on .pdot{animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* Mixer specific */
+.mix-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;}
+.mix-col{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem;}
+.mix-tag{font-size:.78rem;font-weight:600;margin-bottom:.15rem;letter-spacing:.3px;}
+
+/* Piano */
+.piano-wrap{position:relative;height:170px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:.75rem;}
+.piano-white-row{display:flex;height:100%;}
+.pkey-white{flex:1;background:linear-gradient(180deg,#e9e9f0,#c9c9d6);position:relative;cursor:pointer;border-right:1px solid rgba(0,0,0,.2);transition:background .08s;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;user-select:none;}
+.pkey-white:last-child{border-right:none;}
+.pkey-white.active{background:linear-gradient(180deg,var(--pkcolor,var(--color)),#087);}
+.pkey-white .lbl{font-size:9px;font-family:'JetBrains Mono',monospace;color:rgba(0,0,0,.32);pointer-events:none;}
+.pkey-black{position:absolute;top:0;height:60%;background:linear-gradient(180deg,#1c1c22,#000);border-radius:0 0 4px 4px;cursor:pointer;z-index:2;box-shadow:0 3px 5px rgba(0,0,0,.5);transition:background .08s;user-select:none;}
+.pkey-black.active{background:linear-gradient(180deg,var(--pkcolor,var(--color)),#066);}
+.piano-hint{font-size:10px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,.18);text-align:center;margin-top:-.4rem;margin-bottom:.75rem;letter-spacing:.5px;}
+
+.divider-space{height:.75rem;}
+
+/* Footer */
+footer{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 0 0;border-top:1px solid var(--border);margin-top:1.25rem;flex-wrap:wrap;gap:.5rem;}
+.ft{font-size:11px;color:rgba(255,255,255,.13);font-family:'JetBrains Mono',monospace;}
+
+@media (max-width:700px){
+  .grid,.grid-even,.mix-row{grid-template-columns:1fr;}
+  .ctrls{grid-template-columns:1fr 1fr;}
+  .wbtn-label{font-size:8px;}
+  .hbadges{display:none;}
+  .tabs{flex-wrap:nowrap;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="wordmark"><span class="wdot"></span>WaveLab</div>
+  <div class="hbadges">
+    <span class="badge">Web Audio API</span>
+    <span class="badge">Canvas 2D</span>
+    <span class="badge">5 Modules</span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab on" data-tab="lab">〜 Waveform Lab</button>
+  <button class="tab" data-tab="epi" style="--tabcol:#ffb703">◎ Fourier Epicycles</button>
+  <button class="tab" data-tab="mix" style="--tabcol:#a78bfa">∿+∿ Wave Mixer</button>
+  <button class="tab" data-tab="piano" style="--tabcol:#34d399">♪ Piano</button>
+  <button class="tab" data-tab="lis3d" style="--tabcol:#7c5cfc">◆ 3D Lissajous</button>
+</nav>
+
+<!-- ══════════════ TAB 1: WAVEFORM LAB ══════════════ -->
+<section class="tabpanel" id="panel-lab">
+  <p class="panel-intro">Explore the five fundamental wave shapes — adjust frequency, amplitude, and phase, then hear the result.</p>
+
+  <div class="type-row" id="lab-types">
+    <button class="wbtn on" data-type="sine">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 11 C10 1,20 1,30 11 C40 21,50 21,60 11 C70 1,75 1,80 11" stroke="#00f5d4" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Sine</span>
+    </button>
+    <button class="wbtn" data-type="square">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 17 L0 5 L20 5 L20 17 L40 17 L40 5 L60 5 L60 17 L80 17" stroke="#f72585" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Square</span>
+    </button>
+    <button class="wbtn" data-type="sawtooth">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 17 L20 5 L20 17 L40 5 L40 17 L60 5 L60 17 L80 5" stroke="#ff9f1c" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Sawtooth</span>
+    </button>
+    <button class="wbtn" data-type="triangle">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 17 L15 5 L30 17 L45 5 L60 17 L75 5 L80 7" stroke="#b14aed" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Triangle</span>
+    </button>
+    <button class="wbtn" data-type="fourier">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 11 C6 1,14 1,20 11 C26 21,34 21,40 11 C44 4,47 1,52 6 C57 11,59 15,64 11 C69 7,72 5,80 11" stroke="#4cc9f0" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Fourier</span>
+    </button>
+  </div>
+
+  <div class="grid">
+    <div class="ccard"><span class="clabel">Oscilloscope</span><canvas id="lab-osc" class="ch-220"></canvas></div>
+    <div class="side">
+      <div class="ccard"><span class="clabel">Lissajous</span><canvas id="lab-lis" class="ch-164"></canvas></div>
+      <div class="scard"><span class="card-label">Harmonic spectrum</span><div class="bars" id="lab-spec"></div></div>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <div class="ctrl"><div class="ctrl-n">Frequency</div><div class="ctrl-v" id="lab-v-freq">220 Hz</div><input type="range" id="lab-freq" min="60" max="880" step="1" value="220"></div>
+    <div class="ctrl"><div class="ctrl-n">Amplitude</div><div class="ctrl-v" id="lab-v-amp">0.70</div><input type="range" id="lab-amp" min="0.05" max="1" step="0.01" value="0.70"></div>
+    <div class="ctrl"><div class="ctrl-n">Phase (rad)</div><div class="ctrl-v" id="lab-v-phase">0.00</div><input type="range" id="lab-phase" min="0" max="6.28" step="0.01" value="0"></div>
+    <div class="ctrl"><div class="ctrl-n">Harmonics</div><div class="ctrl-v" id="lab-v-harm">3</div><input type="range" id="lab-harm" min="1" max="16" step="1" value="3"></div>
+  </div>
+
+  <div class="pills">
+    <span class="pill" id="lab-p-period">Period: 4.55ms</span>
+    <span class="pill" id="lab-p-lambda">λ = 1.56m</span>
+    <span class="pill" id="lab-p-omega">ω = 1382 rad/s</span>
+    <span class="pill" id="lab-p-note">Note: A3</span>
+  </div>
+
+  <div class="bottom">
+    <div class="formula"><span style="font-size:9px;color:rgba(255,255,255,.22);letter-spacing:1px;text-transform:uppercase;margin-right:.75rem">Formula</span><span id="lab-fval" class="hl">y(t) = 0.70 · sin(2π · 220 · t)</span></div>
+    <button class="pbtn" id="lab-pbtn"><span class="pdot"></span>Play sound</button>
+  </div>
+</section>
+
+<!-- ══════════════ TAB 2: FOURIER EPICYCLES ══════════════ -->
+<section class="tabpanel" id="panel-epi" hidden>
+  <p class="panel-intro">Any periodic wave can be built from rotating circles — this is Joseph Fourier's 1822 discovery, animated in real time.</p>
+
+  <div class="type-row" id="epi-types">
+    <button class="wbtn on" data-type="square">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 17 L0 5 L20 5 L20 17 L40 17 L40 5 L60 5 L60 17 L80 17" stroke="#f72585" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Square</span>
+    </button>
+    <button class="wbtn" data-type="sawtooth">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 17 L20 5 L20 17 L40 5 L40 17 L60 5 L60 17 L80 5" stroke="#ff9f1c" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Sawtooth</span>
+    </button>
+    <button class="wbtn" data-type="triangle">
+      <svg class="wbtn-svg" viewBox="0 0 80 22"><path d="M0 17 L15 5 L30 17 L45 5 L60 17 L75 5 L80 7" stroke="#b14aed" stroke-width="2" fill="none"/></svg>
+      <span class="wbtn-label">Triangle</span>
+    </button>
+  </div>
+
+  <div class="grid-even">
+    <div class="ccard"><span class="clabel">Epicycles</span><canvas id="epi-circles" class="ch-220"></canvas></div>
+    <div class="ccard"><span class="clabel">Traced wave</span><canvas id="epi-trace" class="ch-220"></canvas></div>
+  </div>
+
+  <div class="ctrls" style="grid-template-columns:1fr 1fr;">
+    <div class="ctrl"><div class="ctrl-n">Harmonics (circles)</div><div class="ctrl-v" id="epi-v-harm">6</div><input type="range" id="epi-harm" min="1" max="30" step="1" value="6"></div>
+    <div class="ctrl"><div class="ctrl-n">Rotation speed</div><div class="ctrl-v" id="epi-v-speed">1.0×</div><input type="range" id="epi-speed" min="0.1" max="3" step="0.1" value="1"></div>
+  </div>
+
+  <div class="pills">
+    <span class="pill" id="epi-p-circles">6 circles</span>
+    <span class="pill">Joseph Fourier, 1822</span>
+    <span class="pill">More circles → sharper edges</span>
+  </div>
+
+  <div class="bottom">
+    <div class="formula"><span style="font-size:9px;color:rgba(255,255,255,.22);letter-spacing:1px;text-transform:uppercase;margin-right:.75rem">Formula</span><span id="epi-fval" class="hl">—</span></div>
+  </div>
+</section>
+
+<!-- ══════════════ TAB 3: WAVE MIXER ══════════════ -->
+<section class="tabpanel" id="panel-mix" hidden>
+  <p class="panel-intro">Two waves combine by simple addition at every point in time. Set close frequencies to hear audible beating.</p>
+
+  <div class="mix-row">
+    <div class="mix-col">
+      <div class="mix-tag" style="color:#00f5d4">● Wave A</div>
+      <div class="wswatches" id="mix-a-types">
+        <div class="wswatch on" data-type="sine" title="Sine" style="background:#00f5d4"></div>
+        <div class="wswatch" data-type="square" title="Square" style="background:#f72585"></div>
+        <div class="wswatch" data-type="sawtooth" title="Sawtooth" style="background:#ff9f1c"></div>
+        <div class="wswatch" data-type="triangle" title="Triangle" style="background:#b14aed"></div>
+      </div>
+      <div class="ctrl-n">Frequency</div><div class="ctrl-v" id="mix-a-vfreq">220 Hz</div>
+      <input type="range" id="mix-a-freq" min="60" max="880" step="1" value="220">
+      <div class="divider-space"></div>
+      <div class="ctrl-n">Amplitude</div><div class="ctrl-v" id="mix-a-vamp">0.70</div>
+      <input type="range" id="mix-a-amp" min="0.05" max="1" step="0.01" value="0.70">
+    </div>
+    <div class="mix-col">
+      <div class="mix-tag" style="color:#f72585">● Wave B</div>
+      <div class="wswatches" id="mix-b-types">
+        <div class="wswatch on" data-type="sine" title="Sine" style="background:#00f5d4"></div>
+        <div class="wswatch" data-type="square" title="Square" style="background:#f72585"></div>
+        <div class="wswatch" data-type="sawtooth" title="Sawtooth" style="background:#ff9f1c"></div>
+        <div class="wswatch" data-type="triangle" title="Triangle" style="background:#b14aed"></div>
+      </div>
+      <div class="ctrl-n">Frequency</div><div class="ctrl-v" id="mix-b-vfreq">224 Hz</div>
+      <input type="range" id="mix-b-freq" min="60" max="880" step="1" value="224">
+      <div class="divider-space"></div>
+      <div class="ctrl-n">Amplitude</div><div class="ctrl-v" id="mix-b-vamp">0.70</div>
+      <input type="range" id="mix-b-amp" min="0.05" max="1" step="0.01" value="0.70">
+    </div>
+  </div>
+
+  <div class="ccard" style="margin-bottom:.75rem;"><span class="clabel">Components (A + B overlaid)</span><canvas id="mix-comp" class="ch-130"></canvas></div>
+  <div class="ccard" style="margin-bottom:.75rem;"><span class="clabel">Sum (A + B)</span><canvas id="mix-sum" class="ch-150"></canvas></div>
+
+  <div class="pills">
+    <span class="pill" id="mix-p-beat">Beat frequency: 4 Hz — listen for the pulsing!</span>
+  </div>
+
+  <div class="bottom">
+    <div class="formula"><span style="font-size:9px;color:rgba(255,255,255,.22);letter-spacing:1px;text-transform:uppercase;margin-right:.75rem">Formula</span><span class="hl">y(t) = A(t) + B(t)</span></div>
+    <button class="pbtn" id="mix-pbtn"><span class="pdot"></span>Play both</button>
+  </div>
+</section>
+
+<!-- ══════════════ TAB 4: PIANO ══════════════ -->
+<section class="tabpanel" id="panel-piano" hidden>
+  <p class="panel-intro">Play notes with any waveform as the timbre — click keys or use your computer keyboard.</p>
+
+  <div class="wswatches" id="piano-types">
+    <div class="wswatch on" data-type="sine" title="Sine" style="background:#00f5d4"></div>
+    <div class="wswatch" data-type="square" title="Square" style="background:#f72585"></div>
+    <div class="wswatch" data-type="sawtooth" title="Sawtooth" style="background:#ff9f1c"></div>
+    <div class="wswatch" data-type="triangle" title="Triangle" style="background:#b14aed"></div>
+  </div>
+
+  <div class="piano-wrap"><div class="piano-white-row" id="piano-keys"></div></div>
+  <div class="piano-hint">Keyboard: A S D F G H J K L (white) · W E T Y U O (black)</div>
+
+  <div class="ccard" style="margin-bottom:.75rem;"><span class="clabel">Live waveform</span><canvas id="piano-scope" class="ch-100"></canvas></div>
+
+  <div class="pills">
+    <span class="pill" id="piano-p-note">Play a note...</span>
+  </div>
+</section>
+
+<!-- ══════════════ TAB 5: 3D LISSAJOUS ══════════════ -->
+<section class="tabpanel" id="panel-lis3d" hidden>
+  <p class="panel-intro">Three independent oscillators drive a point through 3D space — drag the canvas to rotate, adjust the frequency ratios below.</p>
+
+  <div class="ccard" style="margin-bottom:.75rem;"><span class="clabel">Drag to rotate</span><canvas id="lis3d-canvas" class="ch-320"></canvas></div>
+
+  <div class="ctrls">
+    <div class="ctrl"><div class="ctrl-n">Ratio A (x)</div><div class="ctrl-v" id="lis3d-v-a">3</div><input type="range" id="lis3d-a" min="1" max="8" step="1" value="3"></div>
+    <div class="ctrl"><div class="ctrl-n">Ratio B (y)</div><div class="ctrl-v" id="lis3d-v-b">2</div><input type="range" id="lis3d-b" min="1" max="8" step="1" value="2"></div>
+    <div class="ctrl"><div class="ctrl-n">Ratio C (z)</div><div class="ctrl-v" id="lis3d-v-c">5</div><input type="range" id="lis3d-c" min="1" max="8" step="1" value="5"></div>
+    <div class="ctrl"><div class="ctrl-n">Rotation speed</div><div class="ctrl-v" id="lis3d-v-speed">0.6×</div><input type="range" id="lis3d-speed" min="0" max="2" step="0.1" value="0.6"></div>
+  </div>
+
+  <div class="pills">
+    <span class="pill" id="lis3d-p-ratio">Ratio 3 : 2 : 5</span>
+    <span class="pill">Jules Lissajous, 1857</span>
+  </div>
+
+  <div class="bottom">
+    <div class="formula"><span style="font-size:9px;color:rgba(255,255,255,.22);letter-spacing:1px;text-transform:uppercase;margin-right:.75rem">Parametric</span><span class="hl">x=sin(at), y=sin(bt), z=sin(ct+π/2)</span></div>
+    <button class="pbtn" id="lis3d-pbtn"><span class="pdot"></span>Play chord</button>
+  </div>
+</section>
+
+<footer>
+  <span class="ft">WaveLab — Interactive Mathematics of Sound</span>
+  <span class="ft">Web Audio API · Canvas 2D · Vanilla JS</span>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+const TAU = Math.PI*2;
+
+/* ═══════════════════ Shared: colors & wave math ═══════════════════ */
+const COLORS = {
+  sine:{col:'#00f5d4'}, square:{col:'#f72585'}, sawtooth:{col:'#ff9f1c'},
+  triangle:{col:'#b14aed'}, fourier:{col:'#4cc9f0'}
+};
+const LIS_RATIO = {sine:1,square:2,sawtooth:3,triangle:1.5,fourier:2};
+
+function wave(x, type, harm){
+  switch(type){
+    case 'sine': return Math.sin(x);
+    case 'square': return Math.sign(Math.sin(x)) || 1;
+    case 'sawtooth': { const p=((x%TAU)+TAU)%TAU; return 2*(p/TAU)-1; }
+    case 'triangle': { const p=((x%TAU)+TAU)%TAU/TAU; return 1-4*Math.abs(p-0.5); }
+    case 'fourier': { let v=0; for(let k=1;k<=harm;k+=2) v+=Math.sin(k*x)/k; return v*(4/Math.PI)*0.76; }
+  }
+  return 0;
+}
+
+function epiTerms(type, N){
+  const terms=[];
+  if (type==='square'){ for(let n=1;n<=N;n++){ const k=2*n-1; terms.push({k,amp:(4/Math.PI)/k}); } }
+  else if (type==='sawtooth'){ for(let n=1;n<=N;n++){ terms.push({k:n,amp:(2/Math.PI)*Math.pow(-1,n+1)/n}); } }
+  else if (type==='triangle'){ for(let n=0;n<N;n++){ const k=2*n+1; terms.push({k,amp:(8/(Math.PI*Math.PI))*Math.pow(-1,n)/(k*k)}); } }
+  return terms;
+}
+
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+function midiToName(m){ return NOTE_NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1); }
+function freqToNote(f){
+  const midi=Math.round(12*Math.log2(f/440)+69);
+  return midiToName(midi);
+}
+
+/* ═══════════════════ Shared: audio engine (polyphonic) ═══════════════════ */
+const VoiceEngine = (()=>{
+  let ctx=null, master=null;
+  const voices = new Map();
+  function ensure(){
+    if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); master=ctx.createGain(); master.gain.value=0.9; master.connect(ctx.destination); }
+    return ctx;
+  }
+  function play(id, freq, type, vol){
+    ensure(); stop(id, true);
+    const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    osc.type = (type==='fourier') ? 'sawtooth' : type;
+    osc.frequency.value=freq;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(vol!=null?vol:0.3, ctx.currentTime+0.045);
+    osc.connect(gain); gain.connect(master); osc.start();
+    voices.set(id,{osc,gain});
+  }
+  function update(id, freq, type){
+    const v=voices.get(id); if(!v) return;
+    v.osc.frequency.value=freq;
+    if(type) v.osc.type=(type==='fourier')?'sawtooth':type;
+  }
+  function updateVol(id, vol){ const v=voices.get(id); if(v && ctx) v.gain.gain.value=vol; }
+  function stop(id, immediate){
+    const v=voices.get(id); if(!v) return;
+    if(immediate){ try{v.osc.stop();}catch(e){} voices.delete(id); return; }
+    v.gain.gain.cancelScheduledValues(ctx.currentTime);
+    v.gain.gain.setValueAtTime(v.gain.gain.value, ctx.currentTime);
+    v.gain.gain.linearRampToValueAtTime(0, ctx.currentTime+0.09);
+    setTimeout(()=>{ try{v.osc.stop();}catch(e){} }, 130);
+    voices.delete(id);
+  }
+  function stopAll(){ [...voices.keys()].forEach(id=>stop(id)); }
+  function isPlaying(id){ return voices.has(id); }
+  return {play, update, updateVol, stop, stopAll, isPlaying};
+})();
+
+/* ═══════════════════ Tab switching ═══════════════════ */
+let activeTab='lab';
+function syncPlayButtons(){
+  const map=[['lab-pbtn','lab'],['mix-pbtn','mixA'],['lis3d-pbtn','lis3dX']];
+  map.forEach(([btnId,voiceId])=>{
+    const btn=document.getElementById(btnId); if(!btn) return;
+    const on=VoiceEngine.isPlaying(voiceId);
+    btn.classList.toggle('on', on);
+    const label = btnId==='lab-pbtn' ? (on?'Stop':'Play sound') : btnId==='mix-pbtn' ? (on?'Stop':'Play both') : (on?'Stop':'Play chord');
+    btn.innerHTML = '<span class="pdot"></span>'+label;
+  });
+  document.querySelectorAll('.pkey-white.active,.pkey-black.active').forEach(k=>k.classList.remove('active'));
+}
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    document.querySelectorAll('.tabpanel').forEach(p=>p.hidden=true);
+    document.getElementById('panel-'+btn.dataset.tab).hidden=false;
+    activeTab=btn.dataset.tab;
+    VoiceEngine.stopAll();
+    syncPlayButtons();
+    resizeAll();
+  });
+});
+
+/* ═══════════════════ Canvas resize (generic) ═══════════════════ */
+function resizeAll(){
+  document.querySelectorAll('canvas').forEach(el=>{
+    const dpr=window.devicePixelRatio||1;
+    const r=el.getBoundingClientRect();
+    if(r.width===0||r.height===0) return;
+    const ctx=el.getContext('2d');
+    el.width=r.width*dpr; el.height=r.height*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle='#0b0c16'; ctx.fillRect(0,0,r.width,r.height);
+  });
+  Lab.lisTrail=[]; Epi.trail=[]; Lis3D.trail=[];
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB 1 — WAVEFORM LAB
+   ═══════════════════════════════════════════════════════ */
+const Lab={type:'sine',freq:220,amp:0.7,phase:0,harmonics:3,tick:0,lisTick:0,lisTrail:[]};
+
+function applyLabColor(type){
+  const el=document.getElementById('panel-lab');
+  el.style.setProperty('--color', COLORS[type].col);
+  el.style.setProperty('--glow', COLORS[type].col+'38');
+}
+
+function labFrame(){
+  const oscEl=document.getElementById('lab-osc'), lisEl=document.getElementById('lab-lis');
+  const oc=oscEl.getContext('2d'), lc=lisEl.getContext('2d');
+  const W=oscEl.clientWidth, H=oscEl.clientHeight;
+  if(W===0) return;
+
+  oc.fillStyle='#0b0c16'; oc.fillRect(0,0,W,H);
+  oc.strokeStyle='rgba(255,255,255,.032)'; oc.lineWidth=1;
+  for(let i=1;i<8;i++){ oc.beginPath(); oc.moveTo(W*i/8,0); oc.lineTo(W*i/8,H); oc.stroke(); }
+  for(let i=1;i<4;i++){ oc.beginPath(); oc.moveTo(0,H*i/4); oc.lineTo(W,H*i/4); oc.stroke(); }
+  oc.strokeStyle='rgba(255,255,255,.09)'; oc.beginPath(); oc.moveTo(0,H/2); oc.lineTo(W,H/2); oc.stroke();
+
+  const col=COLORS[Lab.type].col, speed=(Lab.freq/220)*0.032, CYCLES=2.6;
+
+  oc.strokeStyle=col+'22'; oc.lineWidth=1.5; oc.beginPath();
+  for(let px=0;px<=W;px++){
+    const x=(px/W)*CYCLES*TAU + Lab.tick*speed*0.45 + Lab.phase;
+    const y=wave(x,Lab.type,Lab.harmonics);
+    const py=H/2 - y*Lab.amp*(H/2-18);
+    px===0?oc.moveTo(px,py):oc.lineTo(px,py);
+  }
+  oc.stroke();
+
+  oc.shadowColor=col; oc.shadowBlur=16; oc.strokeStyle=col; oc.lineWidth=2.5; oc.beginPath();
+  for(let px=0;px<=W;px++){
+    const x=(px/W)*CYCLES*TAU + Lab.tick*speed + Lab.phase;
+    const y=wave(x,Lab.type,Lab.harmonics);
+    const py=H/2 - y*Lab.amp*(H/2-18);
+    px===0?oc.moveTo(px,py):oc.lineTo(px,py);
+  }
+  oc.stroke(); oc.shadowBlur=0;
+
+  const LW=lisEl.clientWidth, LH=lisEl.clientHeight;
+  lc.fillStyle='rgba(11,12,22,.1)'; lc.fillRect(0,0,LW,LH);
+  const ratio=LIS_RATIO[Lab.type], cx=LW/2, cy=LH/2, R=Math.min(LW,LH)*0.41;
+  const step=0.04*(Lab.freq/220)*0.28;
+  Lab.lisTick+=step;
+  const px2=cx+R*Math.sin(Lab.lisTick), py2=cy+R*Math.sin(Lab.lisTick*ratio+Lab.phase);
+  Lab.lisTrail.push({x:px2,y:py2});
+  const maxLen=Math.max(120,Math.floor(380/(Lab.freq/220)));
+  if(Lab.lisTrail.length>maxLen) Lab.lisTrail.shift();
+  for(let i=1;i<Lab.lisTrail.length;i++){
+    const a=i/Lab.lisTrail.length; const hex=Math.floor(a*210).toString(16).padStart(2,'0');
+    lc.strokeStyle=col+hex; lc.lineWidth=a>0.85?2:1.2; lc.shadowBlur=a>0.9?8:0; lc.shadowColor=col;
+    lc.beginPath(); lc.moveTo(Lab.lisTrail[i-1].x,Lab.lisTrail[i-1].y); lc.lineTo(Lab.lisTrail[i].x,Lab.lisTrail[i].y); lc.stroke();
+  }
+  lc.shadowBlur=0;
+  Lab.tick++;
+}
+
+function labBuildBars(){
+  const el=document.getElementById('lab-spec'), col=COLORS[Lab.type].col, N=8;
+  const amps=Array.from({length:N},(_,i)=>{
+    const k=i+1;
+    if(Lab.type==='sine') return k===1?1:0;
+    if(Lab.type==='square') return k%2===1?1/k:0;
+    if(Lab.type==='sawtooth') return 1/k;
+    if(Lab.type==='triangle') return k%2===1?1/(k*k):0;
+    if(Lab.type==='fourier'){ const h=2*k-1; return h<=Lab.harmonics?1/h:0; }
+    return 0;
+  });
+  const mx=Math.max(...amps,0.001);
+  if(el.children.length!==N){ el.innerHTML=''; for(let i=0;i<N;i++){ const b=document.createElement('div'); b.className='bar'; el.appendChild(b); } }
+  [...el.children].forEach((b,i)=>{ b.style.height=Math.round(amps[i]/mx*52)+'px'; b.style.background=col; b.style.opacity=amps[i]>0?(.45+amps[i]/mx*.55).toFixed(2):'.07'; });
+}
+
+function labUpdateFormula(){
+  const a=Lab.amp.toFixed(2), ph=Lab.phase.toFixed(2), f=Lab.freq;
+  let txt='';
+  if(Lab.type==='sine') txt=`y(t) = ${a} · sin(2π · ${f} · t + ${ph})`;
+  else if(Lab.type==='square') txt=`y(t) = ${a} · sgn(sin(2π · ${f} · t + ${ph}))`;
+  else if(Lab.type==='sawtooth') txt=`y(t) = ${a} · 2(${f}t − ⌊${f}t+0.5⌋)`;
+  else if(Lab.type==='triangle') txt=`y(t) = ${a} · (2/π)·arcsin(sin(2π·${f}·t))`;
+  else { const terms=[]; for(let k=1;k<=Math.min(Lab.harmonics,3);k+=2) terms.push(`(1/${k})·sin(${k}·2π·${f}·t)`); if(Lab.harmonics>3) terms.push('…'); txt=`y(t) = (4/π)[${terms.join(' + ')}]`; }
+  document.getElementById('lab-fval').textContent=txt;
+}
+function labUpdatePills(){
+  const f=Lab.freq;
+  document.getElementById('lab-p-period').textContent=`Period: ${(1000/f).toFixed(2)}ms`;
+  document.getElementById('lab-p-lambda').textContent=`λ = ${(343/f).toFixed(2)}m`;
+  document.getElementById('lab-p-omega').textContent=`ω = ${Math.round(TAU*f)} rad/s`;
+  document.getElementById('lab-p-note').textContent=`Note: ${freqToNote(f)}`;
+}
+
+document.querySelectorAll('#lab-types .wbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#lab-types .wbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on'); btn.style.setProperty('--wbtncol', COLORS[btn.dataset.type].col);
+    Lab.type=btn.dataset.type; Lab.lisTrail=[];
+    applyLabColor(Lab.type);
+    if(VoiceEngine.isPlaying('lab')) VoiceEngine.update('lab', Lab.freq, Lab.type);
+    labUpdateFormula(); labBuildBars();
+  });
+});
+document.getElementById('lab-freq').addEventListener('input',e=>{
+  Lab.freq=parseInt(e.target.value); document.getElementById('lab-v-freq').textContent=Lab.freq+' Hz';
+  if(VoiceEngine.isPlaying('lab')) VoiceEngine.update('lab', Lab.freq);
+  Lab.lisTrail=[]; labUpdateFormula(); labUpdatePills();
+});
+document.getElementById('lab-amp').addEventListener('input',e=>{
+  Lab.amp=parseFloat(e.target.value); document.getElementById('lab-v-amp').textContent=Lab.amp.toFixed(2);
+  if(VoiceEngine.isPlaying('lab')) VoiceEngine.updateVol('lab', Lab.amp*0.33);
+  labUpdateFormula();
+});
+document.getElementById('lab-phase').addEventListener('input',e=>{
+  Lab.phase=parseFloat(e.target.value); document.getElementById('lab-v-phase').textContent=Lab.phase.toFixed(2);
+  Lab.lisTrail=[]; labUpdateFormula();
+});
+document.getElementById('lab-harm').addEventListener('input',e=>{
+  Lab.harmonics=parseInt(e.target.value); document.getElementById('lab-v-harm').textContent=Lab.harmonics;
+  labUpdateFormula(); labBuildBars();
+});
+document.getElementById('lab-pbtn').addEventListener('click',()=>{
+  if(VoiceEngine.isPlaying('lab')) VoiceEngine.stop('lab');
+  else VoiceEngine.play('lab', Lab.freq, Lab.type, Lab.amp*0.33);
+  syncPlayButtons();
+});
+
+/* ═══════════════════════════════════════════════════════
+   TAB 2 — FOURIER EPICYCLES
+   ═══════════════════════════════════════════════════════ */
+const Epi={type:'square',harmonics:6,speed:1,t:0,trail:[]};
+
+function epiFrame(){
+  const cEl=document.getElementById('epi-circles'), tEl=document.getElementById('epi-trace');
+  const cc=cEl.getContext('2d'), tc=tEl.getContext('2d');
+  const CW=cEl.clientWidth, CH=cEl.clientHeight;
+  if(CW===0) return;
+  const col=COLORS[Epi.type].col;
+
+  cc.fillStyle='#0b0c16'; cc.fillRect(0,0,CW,CH);
+  const terms=epiTerms(Epi.type, Epi.harmonics);
+  const sumAbs=terms.reduce((a,t)=>a+Math.abs(t.amp),0)||1;
+  const avail=Math.min(CW,CH)/2-16;
+  const R=avail/sumAbs;
+
+  let px=48, py=CH/2, sum=0;
+  cc.strokeStyle='rgba(255,255,255,.14)'; cc.lineWidth=1;
+  terms.forEach(term=>{
+    const phase0=term.amp<0?Math.PI:0;
+    const ang=term.k*Epi.t+phase0;
+    const r=Math.abs(term.amp)*R;
+    cc.beginPath(); cc.arc(px,py,r,0,TAU); cc.stroke();
+    const nx=px+r*Math.cos(ang), ny=py+r*Math.sin(ang);
+    cc.beginPath(); cc.moveTo(px,py); cc.lineTo(nx,ny); cc.stroke();
+    px=nx; py=ny;
+    sum+=term.amp*Math.sin(term.k*Epi.t);
+  });
+  cc.fillStyle=col; cc.shadowColor=col; cc.shadowBlur=10;
+  cc.beginPath(); cc.arc(px,py,4,0,TAU); cc.fill(); cc.shadowBlur=0;
+
+  const TW=tEl.clientWidth, TH=tEl.clientHeight;
+  const traceScale=(TH/2-16);
+  Epi.trail.push(sum);
+  if(Epi.trail.length>TW) Epi.trail.shift();
+
+  tc.fillStyle='#0b0c16'; tc.fillRect(0,0,TW,TH);
+  tc.strokeStyle='rgba(255,255,255,.09)'; tc.beginPath(); tc.moveTo(0,TH/2); tc.lineTo(TW,TH/2); tc.stroke();
+  tc.strokeStyle=col; tc.lineWidth=2.2; tc.shadowColor=col; tc.shadowBlur=12; tc.beginPath();
+  Epi.trail.forEach((v,i)=>{
+    const x=TW-(Epi.trail.length-i), y=TH/2-v*traceScale;
+    i===0?tc.moveTo(x,y):tc.lineTo(x,y);
+  });
+  tc.stroke(); tc.shadowBlur=0;
+
+  Epi.t=(Epi.t+0.02*Epi.speed)%TAU;
+}
+
+function epiUpdateFormula(){
+  const N=Epi.harmonics; let txt='';
+  if(Epi.type==='square') txt=`y = (4/π)·Σ sin((2k−1)t)/(2k−1), k=1..${N}`;
+  else if(Epi.type==='sawtooth') txt=`y = (2/π)·Σ (−1)ⁿ⁺¹sin(nt)/n, n=1..${N}`;
+  else txt=`y = (8/π²)·Σ (−1)ᵏsin((2k+1)t)/(2k+1)², k=0..${N-1}`;
+  document.getElementById('epi-fval').textContent=txt;
+}
+document.querySelectorAll('#epi-types .wbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#epi-types .wbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on'); btn.style.setProperty('--wbtncol', COLORS[btn.dataset.type].col);
+    Epi.type=btn.dataset.type; Epi.trail=[]; epiUpdateFormula();
+  });
+});
+document.getElementById('epi-harm').addEventListener('input',e=>{
+  Epi.harmonics=parseInt(e.target.value); document.getElementById('epi-v-harm').textContent=Epi.harmonics;
+  document.getElementById('epi-p-circles').textContent=Epi.harmonics+' circles';
+  epiUpdateFormula();
+});
+document.getElementById('epi-speed').addEventListener('input',e=>{
+  Epi.speed=parseFloat(e.target.value); document.getElementById('epi-v-speed').textContent=Epi.speed.toFixed(1)+'×';
+});
+
+/* ═══════════════════════════════════════════════════════
+   TAB 3 — WAVE MIXER
+   ═══════════════════════════════════════════════════════ */
+const Mix={a:{type:'sine',freq:220,amp:0.7}, b:{type:'sine',freq:224,amp:0.7}, tick:0};
+
+function mixFrame(){
+  const compEl=document.getElementById('mix-comp'), sumEl=document.getElementById('mix-sum');
+  const cc=compEl.getContext('2d'), sc=sumEl.getContext('2d');
+  const CW=compEl.clientWidth, CH=compEl.clientHeight;
+  const SW=sumEl.clientWidth, SH=sumEl.clientHeight;
+  if(CW===0||SW===0) return;
+
+  const CYCLES=3, timeScale=CYCLES*TAU/220/CW, scroll=Mix.tick*0.032/220;
+  function angleAt(x,freq){ return (x*timeScale+scroll)*freq; }
+
+  cc.fillStyle='#0b0c16'; cc.fillRect(0,0,CW,CH);
+  cc.strokeStyle='rgba(255,255,255,.09)'; cc.beginPath(); cc.moveTo(0,CH/2); cc.lineTo(CW,CH/2); cc.stroke();
+
+  const colA=COLORS[Mix.a.type].col, colB=COLORS[Mix.b.type].col;
+  cc.strokeStyle=colA; cc.lineWidth=1.8; cc.globalAlpha=0.85; cc.beginPath();
+  for(let x=0;x<=CW;x++){ const v=wave(angleAt(x,Mix.a.freq),Mix.a.type,0)*Mix.a.amp; const y=CH/2-v*(CH/2-14); x===0?cc.moveTo(x,y):cc.lineTo(x,y); }
+  cc.stroke();
+  cc.strokeStyle=colB; cc.beginPath();
+  for(let x=0;x<=CW;x++){ const v=wave(angleAt(x,Mix.b.freq),Mix.b.type,0)*Mix.b.amp; const y=CH/2-v*(CH/2-14); x===0?cc.moveTo(x,y):cc.lineTo(x,y); }
+  cc.stroke(); cc.globalAlpha=1;
+
+  sc.fillStyle='#0b0c16'; sc.fillRect(0,0,SW,SH);
+  sc.strokeStyle='rgba(255,255,255,.09)'; sc.beginPath(); sc.moveTo(0,SH/2); sc.lineTo(SW,SH/2); sc.stroke();
+  sc.shadowColor='#fff'; sc.shadowBlur=10; sc.strokeStyle='#f4f4f8'; sc.lineWidth=2.4; sc.beginPath();
+  for(let x=0;x<=SW;x++){
+    const vA=wave(angleAt(x,Mix.a.freq),Mix.a.type,0)*Mix.a.amp;
+    const vB=wave(angleAt(x,Mix.b.freq),Mix.b.type,0)*Mix.b.amp;
+    const y=SH/2-(vA+vB)*((SH/2-14)/2);
+    x===0?sc.moveTo(x,y):sc.lineTo(x,y);
+  }
+  sc.stroke(); sc.shadowBlur=0;
+
+  Mix.tick++;
+}
+
+function mixUpdateBeat(){
+  const diff=Math.abs(Mix.a.freq-Mix.b.freq);
+  const el=document.getElementById('mix-p-beat');
+  if(diff>0 && diff<=15) el.textContent=`Beat frequency: ${diff} Hz — listen for the pulsing!`;
+  else if(diff===0) el.textContent='In unison — no beating (identical frequencies)';
+  else el.textContent=`Beat frequency: ${diff} Hz`;
+}
+document.querySelectorAll('#mix-a-types .wswatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('#mix-a-types .wswatch').forEach(s=>s.classList.remove('on'));
+    sw.classList.add('on'); Mix.a.type=sw.dataset.type;
+    if(VoiceEngine.isPlaying('mixA')) VoiceEngine.update('mixA', Mix.a.freq, Mix.a.type);
+  });
+});
+document.querySelectorAll('#mix-b-types .wswatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('#mix-b-types .wswatch').forEach(s=>s.classList.remove('on'));
+    sw.classList.add('on'); Mix.b.type=sw.dataset.type;
+    if(VoiceEngine.isPlaying('mixB')) VoiceEngine.update('mixB', Mix.b.freq, Mix.b.type);
+  });
+});
+document.getElementById('mix-a-freq').addEventListener('input',e=>{
+  Mix.a.freq=parseInt(e.target.value); document.getElementById('mix-a-vfreq').textContent=Mix.a.freq+' Hz';
+  if(VoiceEngine.isPlaying('mixA')) VoiceEngine.update('mixA', Mix.a.freq);
+  mixUpdateBeat();
+});
+document.getElementById('mix-b-freq').addEventListener('input',e=>{
+  Mix.b.freq=parseInt(e.target.value); document.getElementById('mix-b-vfreq').textContent=Mix.b.freq+' Hz';
+  if(VoiceEngine.isPlaying('mixB')) VoiceEngine.update('mixB', Mix.b.freq);
+  mixUpdateBeat();
+});
+document.getElementById('mix-a-amp').addEventListener('input',e=>{
+  Mix.a.amp=parseFloat(e.target.value); document.getElementById('mix-a-vamp').textContent=Mix.a.amp.toFixed(2);
+  if(VoiceEngine.isPlaying('mixA')) VoiceEngine.updateVol('mixA', Mix.a.amp*0.28);
+});
+document.getElementById('mix-b-amp').addEventListener('input',e=>{
+  Mix.b.amp=parseFloat(e.target.value); document.getElementById('mix-b-vamp').textContent=Mix.b.amp.toFixed(2);
+  if(VoiceEngine.isPlaying('mixB')) VoiceEngine.updateVol('mixB', Mix.b.amp*0.28);
+});
+document.getElementById('mix-pbtn').addEventListener('click',()=>{
+  if(VoiceEngine.isPlaying('mixA')){ VoiceEngine.stop('mixA'); VoiceEngine.stop('mixB'); }
+  else{ VoiceEngine.play('mixA',Mix.a.freq,Mix.a.type,Mix.a.amp*0.28); VoiceEngine.play('mixB',Mix.b.freq,Mix.b.type,Mix.b.amp*0.28); }
+  syncPlayButtons();
+});
+
+/* ═══════════════════════════════════════════════════════
+   TAB 4 — PIANO
+   ═══════════════════════════════════════════════════════ */
+const Piano={type:'sine', tick:0, lastFreq:0};
+const KEY_MAP={a:60,w:61,s:62,e:63,d:64,f:65,t:66,g:67,y:68,h:69,u:70,j:71,k:72,o:73,l:74};
+const PIANO_START=60, PIANO_END=84; // C4 .. C6
+
+function buildPiano(){
+  const whiteOffsets=[0,2,4,5,7,9,11];
+  const container=document.getElementById('piano-keys');
+  container.innerHTML='';
+  const whites=[];
+  for(let m=PIANO_START;m<=PIANO_END;m++){ if(whiteOffsets.includes(m%12)) whites.push(m); }
+
+  whites.forEach(m=>{
+    const key=document.createElement('div');
+    key.className='pkey-white'; key.dataset.midi=m;
+    if(m%12===0){ const lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent=midiToName(m); key.appendChild(lbl); }
+    bindPianoKey(key,m);
+    container.appendChild(key);
+  });
+
+  const blackAfter=new Set([0,1,3,4,5]);
+  const blackWidthPct=(100/whites.length)*0.58;
+  whites.forEach((m,p)=>{
+    if(p<whites.length-1 && blackAfter.has(p%7)){
+      const bkey=document.createElement('div');
+      bkey.className='pkey-black'; bkey.dataset.midi=m+1;
+      const leftPct=((p+1)/whites.length*100)-(blackWidthPct/2);
+      bkey.style.left=leftPct+'%'; bkey.style.width=blackWidthPct+'%';
+      bindPianoKey(bkey,m+1);
+      container.appendChild(bkey);
+    }
+  });
+}
+
+function pianoPress(midi){
+  const el=document.querySelector(`.pkey-white[data-midi="${midi}"], .pkey-black[data-midi="${midi}"]`);
+  const freq=midiToFreq(midi);
+  const col=COLORS[Piano.type].col;
+  if(el){ el.style.setProperty('--pkcolor', col); el.classList.add('active'); }
+  VoiceEngine.play('piano-'+midi, freq, Piano.type, 0.32);
+  Piano.lastFreq=freq;
+  document.getElementById('piano-p-note').textContent=`${midiToName(midi)} — ${freq.toFixed(1)} Hz`;
+}
+function pianoRelease(midi){
+  const el=document.querySelector(`.pkey-white[data-midi="${midi}"], .pkey-black[data-midi="${midi}"]`);
+  if(el) el.classList.remove('active');
+  VoiceEngine.stop('piano-'+midi);
+}
+function bindPianoKey(el, midi){
+  el.addEventListener('pointerdown', e=>{ e.preventDefault(); pianoPress(midi); });
+  el.addEventListener('pointerup', ()=>pianoRelease(midi));
+  el.addEventListener('pointerleave', ()=>pianoRelease(midi));
+  el.addEventListener('pointercancel', ()=>pianoRelease(midi));
+}
+
+const activeKeyboardKeys=new Set();
+window.addEventListener('keydown', e=>{
+  if(activeTab!=='piano') return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  const k=e.key.toLowerCase();
+  if(KEY_MAP[k]!==undefined && !activeKeyboardKeys.has(k)){ activeKeyboardKeys.add(k); pianoPress(KEY_MAP[k]); }
+});
+window.addEventListener('keyup', e=>{
+  const k=e.key.toLowerCase();
+  if(KEY_MAP[k]!==undefined){ activeKeyboardKeys.delete(k); pianoRelease(KEY_MAP[k]); }
+});
+
+document.querySelectorAll('#piano-types .wswatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('#piano-types .wswatch').forEach(s=>s.classList.remove('on'));
+    sw.classList.add('on'); Piano.type=sw.dataset.type;
+  });
+});
+
+function pianoFrame(){
+  const el=document.getElementById('piano-scope'); const ctx=el.getContext('2d');
+  const W=el.clientWidth, H=el.clientHeight; if(W===0) return;
+  ctx.fillStyle='#0b0c16'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+
+  const anyActive = document.querySelector('.pkey-white.active, .pkey-black.active');
+  if(!anyActive){
+    ctx.fillStyle='rgba(255,255,255,.14)'; ctx.font='11px JetBrains Mono, monospace'; ctx.fillText('Play a note to see its waveform…', 12, H/2+4);
+    return;
+  }
+  const col=COLORS[Piano.type].col, f=Piano.lastFreq||440;
+  const CYCLES=4, speed=(f/440)*0.05;
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowColor=col; ctx.shadowBlur=8; ctx.beginPath();
+  for(let x=0;x<=W;x++){
+    const ang=(x/W)*CYCLES*TAU + Piano.tick*speed;
+    const y=H/2 - wave(ang,Piano.type,0)*(H/2-10);
+    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke(); ctx.shadowBlur=0;
+  Piano.tick++;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB 5 — 3D LISSAJOUS
+   ═══════════════════════════════════════════════════════ */
+const Lis3D={a:3,b:2,c:5,speed:0.6,theta:0,dragging:false,lastX:0,trail:[],tick:0};
+
+function lis3dFrame(){
+  const el=document.getElementById('lis3d-canvas'); const ctx=el.getContext('2d');
+  const W=el.clientWidth, H=el.clientHeight; if(W===0) return;
+
+  ctx.fillStyle='rgba(11,12,22,.09)'; ctx.fillRect(0,0,W,H);
+  if(!Lis3D.dragging) Lis3D.theta+=0.012*Lis3D.speed;
+
+  Lis3D.tick+=0.045;
+  const x=Math.sin(Lis3D.a*Lis3D.tick), y=Math.sin(Lis3D.b*Lis3D.tick), z=Math.sin(Lis3D.c*Lis3D.tick+Math.PI/2);
+  const cosT=Math.cos(Lis3D.theta), sinT=Math.sin(Lis3D.theta);
+  const xr=x*cosT+z*sinT, zr=-x*sinT+z*cosT, yr=y;
+
+  const focal=2.6, persp=focal/(focal+zr), scale=Math.min(W,H)*0.34;
+  const sx=W/2+xr*scale*persp, sy=H/2+yr*scale*persp;
+  const size=Math.max(1,2.4*persp), alpha=Math.max(.22,persp-0.25);
+
+  Lis3D.trail.push({x:sx,y:sy,size,alpha});
+  if(Lis3D.trail.length>420) Lis3D.trail.shift();
+
+  Lis3D.trail.forEach((p,i)=>{
+    const a=(i/Lis3D.trail.length)*p.alpha;
+    ctx.fillStyle=`rgba(124,92,252,${a.toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,TAU); ctx.fill();
+  });
+
+  ctx.shadowColor='#7c5cfc'; ctx.shadowBlur=14; ctx.fillStyle='#7c5cfc';
+  ctx.beginPath(); ctx.arc(sx,sy,4,0,TAU); ctx.fill(); ctx.shadowBlur=0;
+}
+
+const lis3dCanvas=document.getElementById('lis3d-canvas');
+lis3dCanvas.addEventListener('pointerdown', e=>{ Lis3D.dragging=true; Lis3D.lastX=e.clientX; });
+window.addEventListener('pointermove', e=>{ if(!Lis3D.dragging) return; Lis3D.theta+=(e.clientX-Lis3D.lastX)*0.008; Lis3D.lastX=e.clientX; });
+window.addEventListener('pointerup', ()=>{ Lis3D.dragging=false; });
+
+document.getElementById('lis3d-a').addEventListener('input',e=>{ Lis3D.a=parseInt(e.target.value); document.getElementById('lis3d-v-a').textContent=Lis3D.a; lis3dUpdatePill(); if(VoiceEngine.isPlaying('lis3dX')) VoiceEngine.update('lis3dX', 110*Lis3D.a); });
+document.getElementById('lis3d-b').addEventListener('input',e=>{ Lis3D.b=parseInt(e.target.value); document.getElementById('lis3d-v-b').textContent=Lis3D.b; lis3dUpdatePill(); if(VoiceEngine.isPlaying('lis3dY')) VoiceEngine.update('lis3dY', 110*Lis3D.b); });
+document.getElementById('lis3d-c').addEventListener('input',e=>{ Lis3D.c=parseInt(e.target.value); document.getElementById('lis3d-v-c').textContent=Lis3D.c; lis3dUpdatePill(); if(VoiceEngine.isPlaying('lis3dZ')) VoiceEngine.update('lis3dZ', 110*Lis3D.c); });
+document.getElementById('lis3d-speed').addEventListener('input',e=>{ Lis3D.speed=parseFloat(e.target.value); document.getElementById('lis3d-v-speed').textContent=Lis3D.speed.toFixed(1)+'×'; });
+function lis3dUpdatePill(){ document.getElementById('lis3d-p-ratio').textContent=`Ratio ${Lis3D.a} : ${Lis3D.b} : ${Lis3D.c}`; }
+
+document.getElementById('lis3d-pbtn').addEventListener('click',()=>{
+  if(VoiceEngine.isPlaying('lis3dX')){ VoiceEngine.stop('lis3dX'); VoiceEngine.stop('lis3dY'); VoiceEngine.stop('lis3dZ'); }
+  else{
+    VoiceEngine.play('lis3dX', 110*Lis3D.a, 'sine', 0.22);
+    VoiceEngine.play('lis3dY', 110*Lis3D.b, 'sine', 0.22);
+    VoiceEngine.play('lis3dZ', 110*Lis3D.c, 'sine', 0.22);
+  }
+  syncPlayButtons();
+});
+
+/* ═══════════════════════════════════════════════════════
+   MASTER LOOP + INIT
+   ═══════════════════════════════════════════════════════ */
+function masterLoop(){
+  if(activeTab==='lab') labFrame();
+  else if(activeTab==='epi') epiFrame();
+  else if(activeTab==='mix') mixFrame();
+  else if(activeTab==='piano') pianoFrame();
+  else if(activeTab==='lis3d') lis3dFrame();
+  requestAnimationFrame(masterLoop);
+}
+
+applyLabColor('sine');
+document.querySelector('#lab-types .wbtn.on').style.setProperty('--wbtncol', COLORS.sine.col);
+document.querySelector('#epi-types .wbtn.on').style.setProperty('--wbtncol', COLORS.square.col);
+labUpdateFormula(); labUpdatePills();
+epiUpdateFormula();
+mixUpdateBeat();
+lis3dUpdatePill();
+buildPiano();
+
+setTimeout(()=>{ resizeAll(); labBuildBars(); masterLoop(); }, 80);
+window.addEventListener('resize', resizeAll);
+</script>
+</body>
+</html>
